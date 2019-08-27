@@ -76,12 +76,8 @@ function EMR_MSM_Model_DistEstimate(timeseries::MSM_Timeseries_Point{T},
     x = values(timeseries)
     dx = vec(transpose(x[2:num_obs,:]) - transpose(x[1:num_obs-1, :]))
 
-    print(dx)
-
     chn = sample(regr(x,dx, timesteps(timeseries), num_params, num_obs),
         Turing.NUTS(num_samples,  0.65))
-
-    print(chn)
 
     EMR_MSM_Model_DistEstimate{T}([EMR_MSM_Model_PointEstimate(
         Array{T}(chn[:F].value[j, 1:num_params, 1]),
