@@ -26,11 +26,11 @@ function EMR_MSM_Model_PointEstimate(F::S, A::S, B::S, L::S,
 end
 
 # Model for main-level regression
-@model regr(x, dx, timesteps, num_params, num_obs) = begin
+@model regr(x, dx, timesteps, num_params, num_obs, tau0) = begin
     logsigma ~ Normal(0,1)
     sigma = exp(logsigma)
 
-    tau ~ Half(Cauchy(0,sigma/sqrt(num_obs)))
+    tau ~ Half(Cauchy(0,tau0*sigma/sqrt(num_obs)))
 
     F = Array{Float64}(undef, num_params)
     A = Array{Float64}(undef, num_params^2)
@@ -61,7 +61,7 @@ end
 end
 
 function EMR_MSM_Model_DistEstimate(timeseries::MSM_Timeseries_Point{T},
-    num_layers::Integer, num_samples::Integer) where T <: Real
+    num_layers::Integer, num_samples::Integer, tau0::T=one(T)) where T <: Real
 
     num_obs = length(timeseries)
     num_params = params(timeseries)
@@ -76,7 +76,7 @@ function EMR_MSM_Model_DistEstimate(timeseries::MSM_Timeseries_Point{T},
     x = values(timeseries)
     dx = vec(transpose(x[2:num_obs,:]) - transpose(x[1:num_obs-1, :]))
 
-    chn = sample(regr(x,dx, timesteps(timeseries), num_params, num_obs),
+    chn = sample(regr(x,dx, timesteps(timeseries), num_params, num_obs, tau0),
         Turing.NUTS(num_samples,  0.65))
 
     EMR_MSM_Model_DistEstimate{T}([EMR_MSM_Model_PointEstimate(
