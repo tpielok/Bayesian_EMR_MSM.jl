@@ -43,13 +43,10 @@ import Random
         test_point_est = Bayesian_EMR_MSM.EMR_MSM_Estimate(model, timeseries_start)
 
         pred = Bayesian_EMR_MSM.EMR_MSM_Prediction(test_point_est, num_pred, timestep)
-        print(Bayesian_EMR_MSM.values(pred.pred_timeseries))
 
         dist_est = Bayesian_EMR_MSM.EMR_MSM_Estimate(pred.pred_timeseries, 0,
             num_samples)
 
-        print("Model:\n")
-        print(model)
 
         mean_est = Bayesian_EMR_MSM.EMR_MSM_Model_PointEstimate(
             dist_est.model,

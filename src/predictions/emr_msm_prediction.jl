@@ -6,13 +6,13 @@ end
 
 # todo: enlarge existing prediction - maybe type problems
 function EMR_MSM_Prediction(
-    est::EMR_MSM_Estimate{T, M, S}, num_preds::Integer,
+    est::EMR_MSM_Estimate{T, M, S},
     timesteps::Array{T,1},
     start_ind::Integer = length(est.timeseries),
     ) where {T<:AbstractFloat, M<:EMR_MSM_Model_Estimate{T},
             S<:MSM_Timeseries{T}}
 
-    pred_timeseries = MSM_PredTimeseries(est.timeseries, num_preds, timesteps)
+    pred_timeseries = MSM_PredTimeseries(est.timeseries, timesteps)
     EMR_MSM_Prediction(pred_timeseries, est, start_ind)
 end
 
