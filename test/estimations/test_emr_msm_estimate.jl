@@ -56,7 +56,7 @@ import Random
         tau0 = 100
 
         dist_est = Bayesian_EMR_MSM.EMR_MSM_Estimate(pred.pred_timeseries, 0,
-        num_samples, tau0)
+        num_samples, num_chains, tau0)
 
         @test true == true
     end
