@@ -11,10 +11,12 @@ EMR_MSM_Estimate(model::M,timeseries::S) where
     EMR_MSM_Estimate{T,M,S}(model, timeseries)
 
 EMR_MSM_Estimate(timeseries::S, num_layers::Integer, num_samples::Integer,
+    num_chains::Integer,
     tau0::T = one(T)) where
     S <: MSM_Timeseries{T} where T <: Real =
     EMR_MSM_Estimate{T, EMR_MSM_Model_DistEstimate{T}, S}(
         EMR_MSM_Model_DistEstimate(timeseries, num_layers, num_samples,
+        num_chains,
         tau0),
         timeseries
     )
