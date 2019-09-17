@@ -33,3 +33,7 @@ residuals(ts::MSM_Timeseries_Point{T}) where T <:Real  = ts.residuals
 Base.length(ts::S) where {S<:MSM_Timeseries} = size(values(ts), 1)
 params(ts::S) where {S<:MSM_Timeseries} = size(values(ts), 2)
 layers(ts::S) where {S<:MSM_Timeseries} = size(residuals(ts), 3)
+
+function Base.copy(ts::S) where {S<:MSM_Timeseries{T}} where {T <:Real}
+    S(copy(ts.x), copy(ts.residuals), copy(ts.timesteps))
+end

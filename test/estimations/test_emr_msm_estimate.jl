@@ -53,7 +53,9 @@ import Random
 
         pred = Bayesian_EMR_MSM.EMR_MSM_Prediction(test_point_est, num_pred, timestep)
 
-        tau0 = 100
+        copy(pred.pred_timeseries)
+
+        tau0 = 100.0
 
         dist_est = Bayesian_EMR_MSM.EMR_MSM_Estimate(pred.pred_timeseries, 0,
         num_samples, num_chains, tau0)
