@@ -48,7 +48,7 @@ function EMR_MSM_Prediction(pred_timeseries::MSM_Timeseries_Point{T},
     tS = timesteps(pred_timeseries)
 
     for i=2:length(pred_timeseries)
-        r[i,:,num_layers] = rand(Normal(0, σ), num_params)
+        r[i,:,num_layers] = ifelse(num_layers == 1, zeros(T, num_params), rand(Normal(0, σ), num_params))
         # for l = (num_layers-1):-1:1
         #     r[i,:,l] = tS[i]*(L_mats[l]*vcat(x[i-1,:],vec(r[i-1,:,1:l])) +
         #                 r[i-1,:,l+1]) + r[i-1,:,l]
