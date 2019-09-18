@@ -31,8 +31,8 @@ function MSM_PredTimeseries(timeseries::S,
         layers(timeseries), timeSteps, num_samples)
 end
 
-MSM_PredTimeseries(timeseries::MSM_PredTimeseries_Dist,
-    aggregate_fun::Function) =
+MSM_PredTimeseries(timeseries::MSM_PredTimeseries_Dist{T},
+    aggregate_fun::Function)  where T <: Real =
         MSM_Timeseries_Point{T}(
             mapslices(aggregate_fun, timeseries.x; dims=(3))[:,:,1],
             mapslices(aggregate_fun, timeseries.residuals; dims=(4))[:,:,:,1],
