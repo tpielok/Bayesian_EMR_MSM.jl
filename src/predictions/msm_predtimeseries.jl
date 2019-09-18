@@ -33,7 +33,7 @@ end
 
 MSM_PredTimeseries(timeseries::MSM_PredTimeseries_Dist,
     aggregate_fun::Function) =
-        MSM_Timeseries_Point{Float64}(
+        MSM_Timeseries_Point{T}(
             mapslices(aggregate_fun, timeseries.x; dims=(3))[:,:,1],
             mapslices(aggregate_fun, timeseries.residuals; dims=(4))[:,:,:,1],
             timeseries.timesteps
