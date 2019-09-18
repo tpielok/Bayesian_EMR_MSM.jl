@@ -8,6 +8,7 @@ end
 function EMR_MSM_Prediction(
     est::EMR_MSM_Estimate{T, M, S},
     timesteps::Array{T,1},
+    num_samples::Integer = 1,
     start_ind::Integer = length(est.timeseries),
     ) where {T<:AbstractFloat, M<:EMR_MSM_Model_Estimate{T},
             S<:MSM_Timeseries{T}}
@@ -19,11 +20,14 @@ end
 function EMR_MSM_Prediction(
     est::EMR_MSM_Estimate{T, M, S}, num_preds::Integer,
     timeStep::T = one(T),
+    num_samples::Integer = 1,
     start_ind::Integer = length(est.timeseries),
     ) where {T<:AbstractFloat, M<:EMR_MSM_Model_Estimate{T},
             S<:MSM_Timeseries{T}}
 
-    pred_timeseries = MSM_PredTimeseries(est.timeseries, num_preds, timeStep)
+    pred_timeseries = MSM_PredTimeseries(est.timeseries, num_preds, timeStep,
+        num_samples)
+
     EMR_MSM_Prediction(pred_timeseries, est, start_ind)
 end
 
@@ -63,13 +67,24 @@ function EMR_MSM_Prediction(pred_timeseries::MSM_Timeseries_Point{T},
     EMR_MSM_Prediction{T, MSM_Timeseries_Point{T}}(est, pred_timeseries, start_ind)
 end
 
-function EMR_MSM_Prediction(pred_timeseries::MSM_Timeseries_Point{T},
+function EMR_MSM_Prediction(pred_timeseries::MSM_PredTimeseries_Dist{T},
         est::EMR_MSM_Estimate{T, EMR_MSM_Model_DistEstimate{T}, S},
-        num_preds::Integer,
         start_ind::Integer = length(est.timeseries)
         ) where {T<:AbstractFloat, S<:MSM_Timeseries{T}}
 
-    [EMR_MSM_Prediction(copy(pred_timeseries::MSM_Timeseries_Point{T}),
-             est.estimates[rand(1:size(est))],
-             start_ind) for i in 1:num_preds]
+    for which_ts in 1:samples(pred_timeseries)
+        EMR_MSM_Prediction(
+            MSM_Timeseries_Point{T}(
+                view(pred_timeseries.x,:,:,which_ts),
+                view(pred_timeseries.residuals,:,:,:,which_ts),
+                view(pred_timeseries.timesteps,:)),
+            EMR_MSM_Estimate(
+                est.model.estimates[rand(1:size(est.model))],
+                est.timeseries
+                ),
+            start_ind)
+    end
+
+    EMR_MSM_Prediction{T, MSM_PredTimeseries_Dist{T}}(
+        est, pred_timeseries, start_ind)
 end

@@ -14,14 +14,14 @@ import Random
         num_params = 2
         num_layers = 0
         σ = 0.002
-        num_pred = 100
+        num_pred = 10
         timestep = 0.0015
         F_zero = false
         A_zero = false
         B_zero = false
 
-        num_samples = 1000
-        num_chains = 4
+        num_samples = 10
+        num_chains = 1
 
         Random.seed!(seed)
 
@@ -53,12 +53,17 @@ import Random
 
         pred = Bayesian_EMR_MSM.EMR_MSM_Prediction(test_point_est, num_pred, timestep)
 
-        copy(pred.pred_timeseries)
-
         tau0 = 100.0
+        num_pred_samples = 100
 
         dist_est = Bayesian_EMR_MSM.EMR_MSM_Estimate(pred.pred_timeseries, 0,
         num_samples, num_chains, tau0)
+
+        dist_pred = Bayesian_EMR_MSM.EMR_MSM_Prediction(
+            dist_est, num_pred, timestep, num_pred_samples
+        )
+
+        print(dist_pred.pred_timeseries.x)
 
         @test true == true
     end

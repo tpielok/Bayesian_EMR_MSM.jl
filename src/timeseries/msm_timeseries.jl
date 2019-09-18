@@ -1,13 +1,13 @@
 abstract type MSM_Timeseries{T<:AbstractFloat} end
 
 struct MSM_Timeseries_Point{T<:AbstractFloat} <: MSM_Timeseries{T}
-    x::Array{T,2}
-    residuals::Array{T,3}
-    timesteps::Array{T,1}
+    x::AbstractArray{T,2}
+    residuals::AbstractArray{T,3}
+    timesteps::AbstractArray{T,1}
 
-    MSM_Timeseries_Point{T}(x::Array{T,2},
-        residuals::Array{T,3},
-        timesteps::Array{T,1}) where T <: Real =
+    MSM_Timeseries_Point{T}(x::AbstractArray{T,2},
+        residuals::AbstractArray{T,3},
+        timesteps::AbstractArray{T,1}) where T <: Real =
             new(x,residuals,timesteps)
 end
 
@@ -27,10 +27,11 @@ end
 
 timesteps(ts::S) where {S<:MSM_Timeseries} = ts.timesteps
 
-values(ts::MSM_Timeseries_Point{T}) where T <:Real = ts.x
+values(ts::S) where {S<:MSM_Timeseries} = ts.x
 residuals(ts::MSM_Timeseries_Point{T}) where T <:Real  = ts.residuals
 
 Base.length(ts::S) where {S<:MSM_Timeseries} = size(values(ts), 1)
+
 params(ts::S) where {S<:MSM_Timeseries} = size(values(ts), 2)
 layers(ts::S) where {S<:MSM_Timeseries} = size(residuals(ts), 3)
 
