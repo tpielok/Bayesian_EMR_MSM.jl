@@ -31,6 +31,13 @@ function MSM_PredTimeseries(timeseries::S,
         layers(timeseries), timeSteps, num_samples)
 end
 
+MSM_PredTimeseries(timeseries::MSM_PredTimeseries_Dist,
+    aggregate_fun::Function) =
+        MSM_Timeseries_Point{Float64}(
+            mapslices(aggregate_fun, timeseries.x; dims=(3))[:,:,1],
+            mapslices(aggregate_fun, timeseries.residuals; dims=(4))[:,:,:,1],
+            timeseries.timesteps
+        )
 
 MSM_PredTimeseries(::Type{MSM_Timeseries_Point{T}},
     num_params::Integer, num_layers::Integer, timeSteps::Array{T,1},
