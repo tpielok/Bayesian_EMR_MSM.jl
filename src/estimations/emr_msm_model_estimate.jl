@@ -45,10 +45,24 @@ functions{
                                     ((num_params*num_params+num_params)/2)]);
         return sym;
     }
+
+    int get_rc_ind(int cur_layer, int num_params2){
+        return num_params2*((cur_layer+2)*(cur_layer+1)/2 - 1);
+    }
+
+    matrix predict(row_vector start, matrix diff, int num_params, int num_data){
+        matrix[num_data, num_params] pred;
+        pred[1] = start;
+        for(i in 2:num_data){
+                pred[i] = pred[i-1] + diff[i-1];
+        }
+        return pred;
+    }
 }
 data {
   int<lower=0> num_data;
   int<lower=0> num_params;
+  int<lower=0> num_layers;
   matrix[num_data, num_params] x;
   matrix[num_data-1, num_params] dx;
   vector[num_data] time_steps;
@@ -60,6 +74,8 @@ transformed data{
   int num_params2 = num_params*num_params;
   int num_sym_params = (num_params*num_params + num_params) / 2;
   int num_all_sym_params = num_params*(num_params*num_params + num_params) / 2;
+  int num_rescor_params =
+    num_params*num_params*((num_layers+2)*(num_layers+1)/2 - 1);
 }
 parameters {
   real<lower=0> r1_global;
@@ -72,10 +88,13 @@ parameters {
   vector<lower=0>[num_params2] r2_local_l;
   vector<lower=0>[num_all_sym_params] r1_local_q;
   vector<lower=0>[num_all_sym_params] r2_local_q;
+  vector<lower=0>[num_rescor_params] r1_local_rc;
+  vector<lower=0>[num_rescor_params] r2_local_rc;
 
   vector[num_params] f;
   vector[num_params2] l;
   vector[num_all_sym_params] q;
+  vector[num_rescor_params] rc;
 }
 transformed parameters {
   real<lower=0> tau;
@@ -83,25 +102,45 @@ transformed parameters {
   vector<lower=0>[num_params] lambda_f;
   vector<lower=0>[num_params2] lambda_l;
   vector<lower=0>[num_all_sym_params] lambda_q;
+  vector<lower=0>[num_rescor_params] lambda_rc;
 
   real sigma;
   vector[num_params] trafo_f;
   vector[num_params2] trafo_l;
   vector[num_all_sym_params] trafo_q;
+  vector[num_rescor_params] trafo_rc;
   matrix[num_params,num_params] trafo_qq[num_params];
 
+  matrix[num_data-1,(num_layers+1)*num_params] res_vec;
   matrix[num_data-1, num_params] trafo_dx_hat;
+  matrix[num_data-1, num_params] r[num_layers];
+  matrix[num_data-1, num_params] dr[num_layers];
+  matrix[num_data-1, num_params] trafo_r_hat[num_layers];
+  matrix[num_data-1, num_params] trafo_dr_hat[num_layers];
+  matrix[num_data-1, num_params] trafo_r_tilde[num_layers];
+  matrix[num_data-1, num_params] trafo_dr_tilde[num_layers];
 
   trafo_dx_hat = rep_matrix(0, num_data-1, num_params);
+  res_vec = rep_matrix(0, num_data-1,(num_layers+1)*num_params);
+  for(i in 1:num_layers){
+      trafo_dr_hat[i] = rep_matrix(0, num_data-1, num_params);
+      trafo_r_hat[i] = rep_matrix(0, num_data-1, num_params);
+      trafo_r_tilde[i] = rep_matrix(0, num_data-1, num_params);
+      dr[i] = rep_matrix(0, num_data-1, num_params);
+      r[i] = rep_matrix(0, num_data-1, num_params);
+      trafo_dr_tilde[i] = rep_matrix(0, num_data-1, num_params);
+  }
 
   tau = r1_global * sqrt(r2_global);
   lambda_f = r1_local_f .* sqrt(r2_local_f);
   lambda_l = r1_local_l .* sqrt(r2_local_l);
   lambda_q = r1_local_q .* sqrt(r2_local_q);
+  lambda_rc = r1_local_rc .* sqrt(r2_local_rc);
 
   trafo_f = f .* lambda_f * tau;
   trafo_l = l .* lambda_l * tau;
   trafo_q = q .* lambda_q * tau;
+  trafo_rc = rc .* lambda_rc * tau;
 
   sigma = exp(logsigma);
 
@@ -118,6 +157,35 @@ transformed parameters {
     trafo_dx_hat[i] = time_steps[i+1]*trafo_dx_hat[i];
   }
 
+  if(num_layers > 0){
+      r[1] = dx - trafo_dx_hat;
+
+      res_vec[:,:num_params] = x[:(num_data-1),:];
+      for(i in 1:num_layers){
+        dr[i][1:(num_data-2),:] = r[i][2:,:] - r[i][:(num_data-2),:];
+        res_vec[:,(i*num_params+1):((i+1)*num_params)] = r[i];
+        for(j in 1:(num_data-1-i)){
+            trafo_dr_hat[i][j] = res_vec[j,:(num_params*(i+1))] * to_matrix(trafo_rc[
+                (get_rc_ind(i-1, num_params2)+1):get_rc_ind(i, num_params2)],
+                num_params, (i+1)*num_params)';
+        }
+        if(i < num_layers){
+            r[i+1] = dr[i] - trafo_dr_hat[i];
+        }
+      }
+
+      trafo_dr_tilde[num_layers] = trafo_dr_hat[num_layers];
+      for(i in (-num_layers):(-1)){
+          trafo_r_tilde[-i] = predict(r[-i][1], trafo_dr_tilde[-i],
+            num_params, num_data-1);
+          if(-i < num_layers){
+                trafo_dr_tilde[-1-i] = trafo_dr_hat[-1-i] +
+                    trafo_r_tilde[-i];
+          }
+      }
+
+      trafo_dx_hat = trafo_dx_hat + trafo_r_tilde[1];
+  }
 }
 model {
   r1_global ~ normal(0.0, scale_global*sigma);
@@ -129,6 +197,8 @@ model {
   r2_local_l ~ inv_gamma(0.5*nu_local, 0.5*nu_local);
   r1_local_q ~ normal(0.0, 1);
   r2_local_q ~ inv_gamma(0.5*nu_local, 0.5*nu_local);
+  r1_local_rc ~ normal(0.0, 1);
+  r2_local_rc ~ inv_gamma(0.5*nu_local, 0.5*nu_local);
 
   f ~ normal(0,1);
   l ~ normal(0,1);
@@ -153,6 +223,7 @@ function EMR_MSM_Model_DistEstimate(timeseries::MSM_Timeseries_Point{T},
 
     ts_data = Dict("num_data" => num_obs,
             "num_params" => num_params,
+            "num_layers" => num_layers,
             "x" => x,
             "dx" => dx,
             "time_steps" => timesteps(timeseries),
@@ -169,9 +240,12 @@ function EMR_MSM_Model_DistEstimate(timeseries::MSM_Timeseries_Point{T},
         (div(j-1,num_samples)+1)])[mod(j-1,num_samples)+1] for i in 1:num_params^2],
         vcat([vec(hcat([vec([chns.value[:,"trafo_qq." * string(i) *"."* string(k) *"." * string(l),
         (div(j-1,num_samples)+1)][mod(j-1,num_samples)+1]
-        for k in 1:num_params]) for l in 1:num_params]...)) for i in 1:num_params]...),
-            Array{T}(undef,length(Bayesian_EMR_MSM.ResCorrs, num_params, num_layers)),
-            chns.value[:,"sigma",(div(j-1,num_samples)+1)][mod(j-1,num_samples)+1],
+            for k in 1:num_params]) for l in 1:num_params]...)) for i in 1:num_params]...),
+        ifelse(num_layers == 0, Array{T}(undef,length(Bayesian_EMR_MSM.ResCorrs, num_params, num_layers)),
+        [vec(chns.value[:,"trafo_rc." * string(i),
+        (div(j-1,num_samples)+1)])[mod(j-1,num_samples)+1] for i in 1:length(Bayesian_EMR_MSM.ResCorrs, num_params, num_layers)]
+        ),
+        chns.value[:,"sigma",(div(j-1,num_samples)+1)][mod(j-1,num_samples)+1],
             num_params, num_layers) for j in 1:(num_samples*num_chains)])
 end
 

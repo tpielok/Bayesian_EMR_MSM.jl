@@ -8,14 +8,16 @@ import Random
 
     @testset "EMR_MSM_PointEstimate" begin
         Bayesian_EMR_MSM.cmdstan_home!("/cmdstan")
-        seed = 7
+        delta = 1/2
+
+        seed = 40
         rand_gen = Normal(0,5)
         num_obs    = 1
         num_params = 2
-        num_layers = 0
-        σ = 0.002
-        num_pred = 10
-        timestep = 0.0015
+        num_layers = 1
+        σ = 0.0
+        num_pred = floor(Int64, delta*1000)
+        timestep = 0.0015/delta
         F_zero = false
         A_zero = false
         B_zero = false
