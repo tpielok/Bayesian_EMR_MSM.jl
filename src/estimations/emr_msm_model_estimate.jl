@@ -165,7 +165,8 @@ transformed parameters {
         dr[i][1:(num_data-2),:] = r[i][2:,:] - r[i][:(num_data-2),:];
         res_vec[:,(i*num_params+1):((i+1)*num_params)] = r[i];
         for(j in 1:(num_data-1-i)){
-            trafo_dr_hat[i][j] = res_vec[j,:(num_params*(i+1))] * to_matrix(trafo_rc[
+            trafo_dr_hat[i][j] = time_steps[j+1] *
+                res_vec[j,:(num_params*(i+1))] * to_matrix(trafo_rc[
                 (get_rc_ind(i-1, num_params2)+1):get_rc_ind(i, num_params2)],
                 num_params, (i+1)*num_params)';
         }
