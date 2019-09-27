@@ -61,7 +61,7 @@ function EMR_MSM_Prediction(pred_timeseries::MSM_Timeseries_Point{T},
 
         x[i,:] = tS[i]*(-A_mat*x[i-1,:] +
             [transpose(x[i-1,:])*B_mats[:,:,k]*x[i-1,:] for k in 1:num_params] +
-            F + r[i,:,1]) + x[i-1,:]
+            F) + r[i,:,1] + x[i-1,:]
     end
 
     EMR_MSM_Prediction{T, MSM_Timeseries_Point{T}}(est, pred_timeseries, start_ind)
