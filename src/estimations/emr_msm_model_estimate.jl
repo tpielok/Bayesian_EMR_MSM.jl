@@ -17,12 +17,14 @@ struct EMR_MSM_Model_DistEstimate{T<:AbstractFloat} <: EMR_MSM_Model_Estimate{T}
 end
 
 function EMR_MSM_Model_PointEstimate(F::S, A::S, B::S, L::S,
-    μ::Array{T,1}, Σ::Array{T,2}, num_params::Integer, num_layers::Integer) where
+    μ::S, Σ::S, num_params::Integer, num_layers::Integer) where
     S <: AbstractVector{T} where T <: Real
     L_mats = ResCorrs(L, num_params, num_layers)
 
     Lin_mat  = reshape(A,(num_params, num_params))
     Quad_mats = reshape(B, (num_params, num_params, num_params))
+
+    Σ = reshape(Σ,(num_params, num_params))
 
     EMR_MSM_Model_PointEstimate{T}(F, Lin_mat, Quad_mats, L_mats, μ, Σ)
 end
@@ -39,10 +41,12 @@ function EMR_MSM_Model_PointEstimate(dist::EMR_MSM_Model_DistEstimate{T},
     else
         L = Array{T}(undef, 0)
     end
-    σ = aggregate_fun([est.σ for est in dist.estimates])
+
+    μ = mapslices(aggregate_fun,hcat([vec(est.μ) for est in dist.estimates]...);dims=2)[:,1]
+    Σ = mapslices(aggregate_fun,hcat([vec(est.Σ) for est in dist.estimates]...);dims=2)[:,1]
 
     EMR_MSM_Model_PointEstimate(F, A, B, L,
-        σ, num_params, num_layers)
+        μ, Σ, num_params, num_layers)
 end
 
 const ts_mv_stanmodel = "
@@ -225,7 +229,8 @@ model {
   l ~ normal(0,1);
   q ~ normal(0,1);
 
-  to_vector(dx) ~ normal(to_vector(trafo_dx_hat), sigma);
+  to_vector(dx[1:(num_data-1-num_layers)]) ~ normal(
+    to_vector(trafo_dx_hat[1:(num_data-1-num_layers)]), sigma);
 }
 ";
 
@@ -277,7 +282,8 @@ function EMR_MSM_Model_DistEstimate(timeseries::MSM_Timeseries_Point{T},
         end
     end
 
-    pred_timeseries = MSM_Timeseries_Dist{T}(x_est, res_est_t, timesteps(timeseries))
+    pred_timeseries = MSM_Timeseries_Dist{T}(x_est, res_est_t,
+        timesteps(timeseries)[1:(num_obs-1)])
 
     return EMR_MSM_Model_DistEstimate{T}([EMR_MSM_Model_PointEstimate(
         [vec(chns.value[:,"trafo_f." * string(i),
@@ -295,7 +301,7 @@ function EMR_MSM_Model_DistEstimate(timeseries::MSM_Timeseries_Point{T},
         end
         ,
         mean.([dx_est_t[:,i,j] for i in 1:num_params]),
-        cov(dx_est_t[:,:,j]),
+        vec(cov(dx_est_t[:,:,j])),
         num_params,
         num_layers
         ) for j in 1:(num_samples*num_chains)]),

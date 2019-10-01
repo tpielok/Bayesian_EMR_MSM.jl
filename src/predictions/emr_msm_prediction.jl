@@ -10,7 +10,7 @@ function EMR_MSM_Prediction(
     timesteps::Array{T,1},
     num_samples::Integer = 1,
     start_ind::Integer = length(est.timeseries),
-    last_layer_residuals::Union{Nothing, AbstractArray{T,2}} = nothing;
+    last_layer_residuals::Union{Nothing, AbstractArray{T}} = nothing;
     rand_last_layer_res = true
     ) where {T<:AbstractFloat, M<:EMR_MSM_Model_Estimate{T},
             S<:MSM_Timeseries{T}}
@@ -25,7 +25,7 @@ function EMR_MSM_Prediction(
     timeStep::T = one(T),
     num_samples::Integer = 1,
     start_ind::Integer = length(est.timeseries),
-    last_layer_residuals::Union{Nothing, AbstractArray{T,2}} = nothing;
+    last_layer_residuals::Union{Nothing, AbstractArray{T}} = nothing;
     rand_last_layer_res = true
     ) where {T<:AbstractFloat, M<:EMR_MSM_Model_Estimate{T},
             S<:MSM_Timeseries{T}}
@@ -40,7 +40,7 @@ end
 function EMR_MSM_Prediction(pred_timeseries::MSM_Timeseries_Point{T},
         est::EMR_MSM_Estimate{T, EMR_MSM_Model_PointEstimate{T}, S},
         start_ind::Integer = length(est.timeseries),
-        last_layer_residuals::Union{Nothing, AbstractArray{T,2}} = nothing;
+        last_layer_residuals::Union{Nothing, AbstractArray{T}} = nothing;
         rand_last_layer_res = true
         ) where {T<:AbstractFloat, S<:MSM_Timeseries{T}}
 
@@ -85,7 +85,7 @@ end
 function EMR_MSM_Prediction(pred_timeseries::MSM_Timeseries_Dist{T},
         est::EMR_MSM_Estimate{T, EMR_MSM_Model_DistEstimate{T}, S},
         start_ind::Integer = length(est.timeseries),
-        last_layer_residuals::Union{Nothing, AbstractArray{T,3}} = nothing;
+        last_layer_residuals::Union{Nothing, AbstractArray{T}} = nothing;
         rand_last_layer_res = true
         ) where {T<:AbstractFloat, S<:MSM_Timeseries{T}}
 
@@ -103,7 +103,13 @@ function EMR_MSM_Prediction(pred_timeseries::MSM_Timeseries_Dist{T},
                 ),
             start_ind,
             if !isnothing(last_layer_residuals)
-                last_layer_residuals[:,:,which_ts]
+                if typeof(last_layer_residuals) <: AbstractArray{T,3}
+                    last_layer_residuals[:,:,which_ts]
+                elseif typeof(last_layer_residuals) <: AbstractArray{T,2}
+                    last_layer_residuals
+                else
+                    nothing
+                end
             else
                 nothing
             end;
