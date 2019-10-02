@@ -235,7 +235,8 @@ model {
 ";
 
 function EMR_MSM_Model_DistEstimate(timeseries::MSM_Timeseries_Point{T},
-    num_layers::Integer, num_samples::Integer, num_chains::Integer, tau0::T=one(T)) where T <: Real
+    num_layers::Integer, num_samples::Integer, num_chains::Integer, tau0::T=one(T);
+    uncorr = true) where T <: Real
 
     num_obs = length(timeseries)
     num_params = params(timeseries)
@@ -300,8 +301,9 @@ function EMR_MSM_Model_DistEstimate(timeseries::MSM_Timeseries_Point{T},
             (div(j-1,num_samples)+1)])[mod(j-1,num_samples)+1] for i in 1:length(ResCorrs, num_params, num_layers)]
         end
         ,
-        mean.([dx_est_t[:,i,j] for i in 1:num_params]),
-        vec(cov(dx_est_t[:,:,j])),
+        ifelse(uncorr, zeros(T, num_params),mean.([dx_est_t[:,i,j] for i in 1:num_params])),
+        ifelse(uncorr, collect(vec(Diagonal(cov(dx_est_t[:,:,j])))),
+            vec(cov(dx_est_t[:,:,j]))),
         num_params,
         num_layers
         ) for j in 1:(num_samples*num_chains)]),
