@@ -18,7 +18,9 @@ Base.vec(rescorrs::ResCorrs{T}) where T <: Real =
 Base.print(rescorrs::ResCorrs) = print(vec(rescorrs))
 Base.length(::Type{ResCorrs}, num_params, num_layers) =
     num_params*num_params*(div((num_layers+2)*(num_layers+1),2)-1)
-Base.size(rescorrs::ResCorrs) = length(vec(rescorrs))
+Base.size(rescorrs::ResCorrs; vec_size=false) = ifelse(vec_size,
+    length(ResCorrs, rescorrs.num_params, rescorrs.num_layers),
+    rescorrs.num_layers)
 
 Base.getindex(rescorrs::ResCorrs{T}, idxs::Integer...) where T <: Real =
     rescorrs.L_mats[idxs...]
