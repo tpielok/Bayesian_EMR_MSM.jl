@@ -84,12 +84,14 @@ functions{
     }
 }
 data {
-  int<lower=0> num_data;
+  int<lower=0> num_timeseries;
+  int<lower=0> num_data[num_timeseries];
+  int<lower=0> max_num_data;
   int<lower=0> num_params;
   int<lower=0> num_layers;
-  matrix[num_data, num_params] x;
-  matrix[num_data-1, num_params] dx;
-  vector[num_data] time_steps;
+  matrix[max_num_data, num_params] x[num_timeseries];
+  matrix[max_num_data-1, num_params] dx[num_timeseries];
+  matrix[max_num_data, num_timeseries] time_steps;
   real<lower=0> scale_global;
   real<lower=1> nu_global;            // degree of freedom for the half-t prior
   real<lower=1> nu_local;             // degree of freedom for the half-t prior
@@ -135,81 +137,84 @@ transformed parameters {
   vector[num_rescor_params] trafo_rc;
   matrix[num_params,num_params] trafo_qq[num_params];
 
-  matrix[num_data-1,(num_layers+1)*num_params] res_vec;
-  matrix[num_data-1, num_params] trafo_dx_hat;
-  matrix[num_data-1, num_params] r[num_layers+1];
-  matrix[num_data-1, num_params] dr[num_layers];
-  matrix[num_data-1, num_params] trafo_r_hat[num_layers];
-  matrix[num_data-1, num_params] trafo_dr_hat[num_layers];
-  matrix[num_data-1, num_params] trafo_r_tilde[num_layers];
-  matrix[num_data-1, num_params] trafo_dr_tilde[num_layers];
+  matrix[max_num_data-1,(num_layers+1)*num_params] res_vec[num_timeseries];
+  matrix[max_num_data-1, num_params] trafo_dx_hat[num_timeseries];
+  matrix[max_num_data-1, num_params] r[num_layers+1,num_timeseries];
+  matrix[max_num_data-1, num_params] dr[num_layers,num_timeseries];
+  matrix[max_num_data-1, num_params] trafo_r_hat[num_layers,num_timeseries];
+  matrix[max_num_data-1, num_params] trafo_dr_hat[num_layers,num_timeseries];
+  matrix[max_num_data-1, num_params] trafo_r_tilde[num_layers,num_timeseries];
+  matrix[max_num_data-1, num_params] trafo_dr_tilde[num_layers,num_timeseries];
 
-  trafo_dx_hat = rep_matrix(0, num_data-1, num_params);
-  res_vec = rep_matrix(0, num_data-1,(num_layers+1)*num_params);
-  for(i in 1:num_layers){
-      trafo_dr_hat[i] = rep_matrix(0, num_data-1, num_params);
-      trafo_r_hat[i] = rep_matrix(0, num_data-1, num_params);
-      trafo_r_tilde[i] = rep_matrix(0, num_data-1, num_params);
-      dr[i] = rep_matrix(0, num_data-1, num_params);
-      r[i] = rep_matrix(0, num_data-1, num_params);
-      trafo_dr_tilde[i] = rep_matrix(0, num_data-1, num_params);
-  }
-
-  tau = r1_global * sqrt(r2_global);
-  lambda_f = r1_local_f .* sqrt(r2_local_f);
-  lambda_l = r1_local_l .* sqrt(r2_local_l);
-  lambda_q = r1_local_q .* sqrt(r2_local_q);
-  lambda_rc = r1_local_rc .* sqrt(r2_local_rc);
-
-  trafo_f = f .* lambda_f * tau;
-  trafo_l = l .* lambda_l * tau;
-  trafo_q = q .* lambda_q * tau;
-  trafo_rc = rc .* lambda_rc * tau;
-
-  sigma = exp(logsigma);
-
-  for (i in 1:(num_data-1)){
-    trafo_dx_hat[i] = -x[i]*to_matrix(trafo_l, num_params, num_params)' + trafo_f';
-    for (j in 1:num_params){
-        trafo_qq[j] = sym_mat(
-                trafo_q[(1+(j-1)*num_sym_params):(j*num_sym_params)],
-                num_params);
-        trafo_dx_hat[i,j] = trafo_dx_hat[i,j] +
-            quad_form(trafo_qq[j],
-                x[i]');
-    }
-    trafo_dx_hat[i] = time_steps[i+1]*trafo_dx_hat[i];
-  }
-
-  r[1] = dx - trafo_dx_hat;
-
-  if(num_layers > 0){
-
-      res_vec[:,:num_params] = x[:(num_data-1),:];
+  for(ts in 1:num_timeseries){
+      trafo_dx_hat[ts] = rep_matrix(0, max_num_data-1, num_params);
+      res_vec[ts] = rep_matrix(0, max_num_data-1,(num_layers+1)*num_params);
       for(i in 1:num_layers){
-        dr[i][1:(num_data-2),:] = r[i][2:,:] - r[i][:(num_data-2),:];
-        res_vec[:,(i*num_params+1):((i+1)*num_params)] = r[i];
-        for(j in 1:(num_data-1-i)){
-            trafo_dr_hat[i][j] = time_steps[j+1] *
-                res_vec[j,:(num_params*(i+1))] * to_matrix(trafo_rc[
-                (get_rc_ind(i-1, num_params2)+1):get_rc_ind(i, num_params2)],
-                num_params, (i+1)*num_params)';
+          trafo_dr_hat[i, ts] = rep_matrix(0, max_num_data-1, num_params);
+          trafo_r_hat[i, ts] = rep_matrix(0, max_num_data-1, num_params);
+          trafo_r_tilde[i, ts] = rep_matrix(0, max_num_data-1, num_params);
+          dr[i, ts] = rep_matrix(0, max_num_data-1, num_params);
+          r[i, ts] = rep_matrix(0, max_num_data-1, num_params);
+          trafo_dr_tilde[i, ts] = rep_matrix(0, max_num_data-1, num_params);
+      }
+
+      tau = r1_global * sqrt(r2_global);
+      lambda_f = r1_local_f .* sqrt(r2_local_f);
+      lambda_l = r1_local_l .* sqrt(r2_local_l);
+      lambda_q = r1_local_q .* sqrt(r2_local_q);
+      lambda_rc = r1_local_rc .* sqrt(r2_local_rc);
+
+      trafo_f = f .* lambda_f * tau;
+      trafo_l = l .* lambda_l * tau;
+      trafo_q = q .* lambda_q * tau;
+      trafo_rc = rc .* lambda_rc * tau;
+
+      sigma = exp(logsigma);
+
+      for (i in 1:(num_data[ts]-1)){
+        trafo_dx_hat[ts][i] =
+            -x[ts][i]*to_matrix(trafo_l, num_params, num_params)' + trafo_f';
+        for (j in 1:num_params){
+            trafo_qq[j] = sym_mat(
+                    trafo_q[(1+(j-1)*num_sym_params):(j*num_sym_params)],
+                    num_params);
+            trafo_dx_hat[ts][i,j] = trafo_dx_hat[ts][i,j] +
+                quad_form(trafo_qq[j],
+                    x[ts][i]');
         }
-
-        r[i+1] = dr[i] - trafo_dr_hat[i];
+        trafo_dx_hat[ts][i] = time_steps[i+1,ts]*trafo_dx_hat[ts][i];
       }
 
-      trafo_dr_tilde[num_layers] = trafo_dr_hat[num_layers];
-      for(i in (-num_layers):(-1)){
-          trafo_r_tilde[-i] = predict(r[-i][1], trafo_dr_tilde[-i],
-            num_params, num_data-1);
-          if(-i > 1){
-                trafo_dr_tilde[-1-i] = trafo_dr_hat[-1-i] +
-                    trafo_r_tilde[-i];
+      r[1, ts] = dx[ts] - trafo_dx_hat[ts];
+
+      if(num_layers > 0){
+
+          res_vec[ts][:,:num_params] = x[ts][:(num_data[ts]-1),:];
+          for(i in 1:num_layers){
+            dr[i, ts][1:(num_data[ts]-2),:] = r[i ,ts][2:,:] - r[i, ts][:(num_data[ts]-2),:];
+            res_vec[ts][:,(i*num_params+1):((i+1)*num_params)] = r[i, ts];
+            for(j in 1:(num_data[ts]-1-i)){
+                trafo_dr_hat[i, ts][j] = time_steps[j+1, ts] *
+                    res_vec[ts][j,:(num_params*(i+1))] * to_matrix(trafo_rc[
+                    (get_rc_ind(i-1, num_params2)+1):get_rc_ind(i, num_params2)],
+                    num_params, (i+1)*num_params)';
+            }
+
+            r[i+1, ts] = dr[i, ts] - trafo_dr_hat[i, ts];
           }
-      }
 
-      trafo_dx_hat = trafo_dx_hat + trafo_r_tilde[1];
+          trafo_dr_tilde[num_layers, ts] = trafo_dr_hat[num_layers ,ts];
+          for(i in (-num_layers):(-1)){
+              trafo_r_tilde[-i, ts] = predict(r[-i, ts][1], trafo_dr_tilde[-i, ts],
+                num_params, num_data[ts]-1);
+              if(-i > 1){
+                    trafo_dr_tilde[-1-i, ts] = trafo_dr_hat[-1-i, ts] +
+                        trafo_r_tilde[-i, ts];
+              }
+          }
+
+          trafo_dx_hat[ts] = trafo_dx_hat[ts] + trafo_r_tilde[1, ts];
+      }
   }
 }
 model {
@@ -229,62 +234,91 @@ model {
   l ~ normal(0,1);
   q ~ normal(0,1);
 
-  to_vector(dx[1:(num_data-1-num_layers)]) ~ normal(
-    to_vector(trafo_dx_hat[1:(num_data-1-num_layers)]), sigma);
+  for(ts in 1:num_timeseries){
+      to_vector(dx[ts][1:(num_data[ts]-1-num_layers)]) ~ normal(
+        to_vector(trafo_dx_hat[ts][1:(num_data[ts]-1-num_layers)]), sigma);
+  }
 }
 ";
 
-function EMR_MSM_Model_DistEstimate(timeseries::MSM_Timeseries_Point{T},
+function EMR_MSM_Model_DistEstimate(timeseries::AbstractArray{MSM_Timeseries_Point{T},1},
     num_layers::Integer, num_samples::Integer, num_chains::Integer, tau0::T=one(T);
     uncorr = true) where T <: Real
 
-    num_obs = length(timeseries)
-    num_params = params(timeseries)
+    num_timeseries = length(timeseries)
 
-    x = values(timeseries)
-    dx = (x[2:num_obs,:]) - (x[1:num_obs-1, :])
+    num_obs = length.(timeseries)
+    max_num_obs = maximum(num_obs)
 
+    num_params = params(timeseries[1])
+
+    x = values.(timeseries)
+    dx = [(x[i][2:num_obs[i],:]) - (x[i][1:num_obs[i]-1, :]) for i in 1:num_timeseries]
+
+    x_stan = permutedims(reshape(hcat(x...),(max_num_obs, num_params, num_timeseries)),
+                        [3,1,2])
+    dx_stan = permutedims(reshape(hcat(dx...),(max_num_obs-1, num_params, num_timeseries)),
+                         [3,1,2])
+
+    # TODO random...
     stanmodel = Stanmodel(name="timeseries_mv" * string(rand(1:10000)),
         model=ts_mv_stanmodel,
         random=CmdStan.Random(123), nchains=num_chains, num_samples=num_samples)
 
-    ts_data = Dict("num_data" => num_obs,
+    ts_data = Dict(
+            "num_timeseries" => num_timeseries,
+            "num_data" => num_obs,
+            "max_num_data" => max_num_obs,
             "num_params" => num_params,
             "num_layers" => num_layers,
-            "x" => x,
-            "dx" => dx,
-            "time_steps" => timesteps(timeseries),
-            "scale_global" => tau0/sqrt(num_obs),
+            "x" => x_stan,
+            "dx" => dx_stan,
+            "time_steps" => hcat(timesteps.(timeseries)...),
+            "scale_global" => tau0 / sqrt(sum(num_obs)),
             "nu_global" => 1,
             "nu_local" => 1
             );
+
     rc, chns, cnames = stan(stanmodel, ts_data, "./", CmdStanDir=CMDSTAN_HOME)
 
-    dx_est = [hcat([[chns.value[:,"trafo_dx_hat." * string(i) *"."* string(p), (div(j-1,num_samples)+1)
-                        ][mod(j-1,num_samples)+1] for i in 1:(num_obs-1)]
+    dx_est = [[hcat([[chns.value[:,"trafo_dx_hat." * string(ts) *"." * string(i) *"."* string(p), (div(j-1,num_samples)+1)
+                        ][mod(j-1,num_samples)+1]
+                        for i in 1:(num_obs[ts]-1)]
                         for p in 1:num_params]...)
                         for j in 1:(num_samples*num_chains)]
+                        for ts in 1:num_timeseries]
 
-    res_est = [[hcat([[chns.value[:,"r."* string(l) *"." * string(i) *"."* string(p), (div(j-1,num_samples)+1)
-                        ][mod(j-1,num_samples)+1] for i in 1:(num_obs-1)]
+    res_est = [[[hcat([[chns.value[:,"r."* string(l) *"." * string(ts) *"."  * string(i) *"."* string(p), (div(j-1,num_samples)+1)
+                        ][mod(j-1,num_samples)+1]
+                        for i in 1:(num_obs[ts]-1)]
                         for p in 1:num_params]...)
                         for l in 1:(num_layers+1)]
                         for j in 1:(num_samples*num_chains)]
+                        for ts in 1:num_timeseries]
 
-    dx_est_t = reshape(hcat(dx_est...),(num_obs-1,num_params,num_samples*num_chains))
-    res_est_t = reshape(hcat(hcat(res_est...)...),
-        (num_obs-1,num_params,num_layers+1,num_samples*num_chains))
+    dx_est_t = [reshape(hcat(dx_est[ts]...),(num_obs[ts]-1,num_params,num_samples*num_chains))
+                for ts in 1:num_timeseries]
+    res_est_t = [reshape(hcat(hcat(res_est[ts]...)...),
+        (num_obs[ts]-1,num_params,num_layers+1,num_samples*num_chains))
+        for ts in 1:num_timeseries]
 
-    x_est = Array{Float64,3}(undef, num_obs-1, num_params, num_samples*num_chains)
-    for j in 1:(num_samples*num_chains)
-        x_est[1,:,j] = x[1,:]
-        for i in 2:(num_obs-1)
-            x_est[i,:,j] = x_est[i-1,:,j] + dx_est_t[i-1,:,j]
+    x_est = [Array{Float64,3}(undef, num_obs[ts]-1, num_params, num_samples*num_chains)
+            for ts in 1:num_timeseries]
+    for ts in 1:num_timeseries
+        for j in 1:(num_samples*num_chains)
+            x_est[ts][1,:,j] = x[ts][1,:]
+            for i in 2:(num_obs[ts]-1)
+                x_est[ts][i,:,j] = x_est[ts][i-1,:,j] + dx_est_t[ts][i-1,:,j]
+            end
         end
     end
 
-    pred_timeseries = MSM_Timeseries_Dist{T}(x_est, res_est_t,
-        timesteps(timeseries)[1:(num_obs-1)])
+    pred_timeseries = [MSM_Timeseries_Dist{T}(x_est[ts], res_est_t[ts],
+        timesteps.(timeseries)[ts][1:(num_obs[ts]-1)])
+        for ts in 1:num_timeseries]
+
+    all_ll_res = [vcat([res_est_t[ts][:,:,num_layers,j] for ts in 1:num_timeseries]...)
+                    for j in 1:num_samples*num_chains]
 
     return EMR_MSM_Model_DistEstimate{T}([EMR_MSM_Model_PointEstimate(
         [vec(chns.value[:,"trafo_f." * string(i),
@@ -301,9 +335,9 @@ function EMR_MSM_Model_DistEstimate(timeseries::MSM_Timeseries_Point{T},
             (div(j-1,num_samples)+1)])[mod(j-1,num_samples)+1] for i in 1:length(ResCorrs, num_params, num_layers)]
         end
         ,
-        ifelse(uncorr, zeros(T, num_params),mean.([dx_est_t[:,i,j] for i in 1:num_params])),
-        ifelse(uncorr, collect(vec(Diagonal(cov(dx_est_t[:,:,j])))),
-            vec(cov(dx_est_t[:,:,j]))),
+        ifelse(uncorr, zeros(T, num_params),mean.([all_ll_res[j][:,i] for i in 1:num_params])),
+        ifelse(uncorr, collect(vec(Diagonal(cov(all_ll_res[j])))),
+            vec(cov(all_ll_res[j]))),
         num_params,
         num_layers
         ) for j in 1:(num_samples*num_chains)]),

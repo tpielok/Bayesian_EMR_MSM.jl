@@ -52,6 +52,11 @@ MSM_Timeseries_Point{T}(timeseries::MSM_Timeseries_Dist{T},
             timeseries.timesteps
         )
 
+MSM_Timeseries_Point{T}(timeseries::Array{MSM_Timeseries_Dist{T},1},
+    aggregate_fun::Function)  where T <: Real =
+                [MSM_Timeseries_Point{T}(ts,aggregate_fun)
+                    for ts in timeseries]
+
 function MSM_Timeseries_Dist{T}(num_obs::Integer, num_params::Integer,
     num_layers::Integer, num_samples::Integer, timesteps::Array{T,1}) where T <: Real
 
