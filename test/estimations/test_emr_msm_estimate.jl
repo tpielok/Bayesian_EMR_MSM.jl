@@ -11,11 +11,12 @@ import Random
         Bayesian_EMR_MSM.cmdstan_home!("/cmdstan")
         delta = 1/50
 
-        seed = 1
+        seed = 2
         rand_gen = Normal(0,5)
-        num_obs    = 1
+        num_obs    = 7
         num_params = 2
         num_layers = 2
+        num_ts = 2
         σ = 0.001
         Σ = Diagonal(repeat([σ],num_params))
         μ = zeros(num_params)
@@ -30,8 +31,10 @@ import Random
 
         Random.seed!(seed)
 
-        x_start   = rand(rand_gen, num_obs, num_params)
-        res_start = rand(rand_gen, num_obs, num_params, num_layers+1)
+        # actually only 1 needed
+        x_start   = [rand(rand_gen, num_obs, num_params) for ts in 1:num_ts]
+        res_start = [rand(rand_gen, num_obs, num_params, num_layers+1)/100
+                        for ts in 1:num_ts]
 
         F = ifelse(F_zero,zeros(num_params),rand(rand_gen, num_params))
         A = ifelse(A_zero,zeros(num_params,num_params),rand(rand_gen, num_params, num_params))
@@ -47,19 +50,19 @@ import Random
 
         model = Bayesian_EMR_MSM.EMR_MSM_Model_PointEstimate(F, A, B, L, μ, Σ)
 
-        timeseries_start = Bayesian_EMR_MSM.MSM_Timeseries_Point{Float64}(
-        x_start,
-        res_start,
+        timeseries_start = [Bayesian_EMR_MSM.MSM_Timeseries_Point{Float64}(
+        x_start[ts],
+        res_start[ts],
         repeat([1.0], num_obs)
-        )
+        ) for ts in 1:num_ts]
 
-        test_point_est = Bayesian_EMR_MSM.EMR_MSM_Estimate(model, [timeseries_start],
+        test_point_est = Bayesian_EMR_MSM.EMR_MSM_Estimate(model, timeseries_start,
             [Bayesian_EMR_MSM.MSM_Timeseries_Dist{Float64}(
                 Array{Float64}(undef,0,0,1),
                 Array{Float64}(undef, 0, 0, 0, 1), [1.0])]
         )
 
-        pred = Bayesian_EMR_MSM.EMR_MSM_Prediction(test_point_est, num_pred, [timestep])
+        pred = Bayesian_EMR_MSM.EMR_MSM_Prediction(test_point_est, num_pred, repeat([timestep],num_ts))
 
         tau0 = 100.0
         num_pred_samples = 100
@@ -78,7 +81,7 @@ import Random
             x -> median(x))
 
         dist_pred = Bayesian_EMR_MSM.EMR_MSM_Prediction(
-            dist_est, num_pred, [timestep], num_pred_samples
+            dist_est, num_pred, repeat([timestep],num_ts), num_pred_samples
         )
 
         print(dist_pred.pred_timeseries[1].x)

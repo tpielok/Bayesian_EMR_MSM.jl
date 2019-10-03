@@ -7,13 +7,14 @@ end
 # TODO: enlarge existing prediction
 function EMR_MSM_Prediction(
     est::EMR_MSM_Estimate{T, M, S},
-    timesteps::Array{AbstractArray{T,1},1},
+    timesteps::Array{A,1},
     num_samples::Integer = 1,
     start_ind::Array{I,1} = length.(est.timeseries),
-    last_layer_residuals::Union{Nothing, Array{AbstractArray{T},1}} = nothing;
+    last_layer_residuals::Union{Nothing, Array{B,1}} = nothing;
     rand_last_layer_res = true
     ) where {T<:AbstractFloat, M<:EMR_MSM_Model_Estimate{T},
-            S<:MSM_Timeseries{T}, I<:Integer}
+            S<:MSM_Timeseries{T}, A<:AbstractArray{T,1},
+            B<:AbstractArray{T,1}, I<:Integer}
 
     pred_timeseries = [MSM_Timeseries(est.timeseries[ts], timesteps[ts],
                         num_samples)
@@ -28,10 +29,10 @@ function EMR_MSM_Prediction(
     timestep::Array{T,1} = [one(T) for i in 1:length(est.timeseries)],
     num_samples::Integer = 1,
     start_ind::Array{I,1} = length.(est.timeseries),
-    last_layer_residuals::Union{Nothing, Array{AbstractArray{T},1}} = nothing;
+    last_layer_residuals::Union{Nothing, Array{B,1}} = nothing;
     rand_last_layer_res = true
     ) where {T<:AbstractFloat, M<:EMR_MSM_Model_Estimate{T},
-            S<:MSM_Timeseries{T}, I<:Integer}
+            B<:AbstractArray{T,1}, S<:MSM_Timeseries{T}, I<:Integer}
 
     pred_timeseries = [MSM_Timeseries(est.timeseries[ts], num_preds, timestep[ts],
         num_samples)
@@ -44,9 +45,9 @@ end
 function EMR_MSM_Prediction(pred_timeseries::Array{MSM_Timeseries_Point{T},1},
         est::EMR_MSM_Estimate{T, EMR_MSM_Model_PointEstimate{T}, S},
         start_ind::Array{I,1} = length.(est.timeseries),
-        last_layer_residuals::Union{Nothing, Array{AbstractArray{T},1}} = nothing;
+        last_layer_residuals::Union{Nothing, Array{B,1}} = nothing;
         rand_last_layer_res = true
-        ) where {T<:AbstractFloat, S<:MSM_Timeseries{T}, I<:Integer}
+        ) where {T<:AbstractFloat, S<:MSM_Timeseries{T}, B<:AbstractArray{T,1}, I<:Integer}
 
     num_layers = layers(pred_timeseries[1])
     num_params = params(pred_timeseries[1])
@@ -92,9 +93,9 @@ end
 function EMR_MSM_Prediction(pred_timeseries::Array{MSM_Timeseries_Dist{T},1},
         est::EMR_MSM_Estimate{T, EMR_MSM_Model_DistEstimate{T}, S},
         start_ind::Array{I,1} = length.(est.timeseries),
-        last_layer_residuals::Union{Nothing, Array{AbstractArray{T},1}} = nothing;
+        last_layer_residuals::Union{Nothing, Array{B,1}} = nothing;
         rand_last_layer_res = true
-        ) where {T<:AbstractFloat, S<:MSM_Timeseries{T}, I<:Integer}
+        ) where {T<:AbstractFloat, S<:MSM_Timeseries{T}, B<:AbstractArray{T,1},  I<:Integer}
 
     for ts in 1:length(pred_timeseries)
         for which_ts in 1:samples(pred_timeseries[ts])
