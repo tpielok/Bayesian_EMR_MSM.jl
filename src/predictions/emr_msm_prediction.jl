@@ -66,7 +66,7 @@ function EMR_MSM_Prediction(pred_timeseries::Array{MSM_Timeseries_Point{T},1},
         r[1,:,:] = residuals(est.timeseries[ts])[start_ind[ts], :, :]
         pred_timesteps = timesteps(pred_timeseries[ts])
 
-        for i=2:length(pred_timeseries)
+        for i=2:length(pred_timeseries[ts])
             r[i,:,num_layers] = if isnothing(last_layer_residuals)
                 rand(MvNormal(μ, Σ))
             elseif rand_last_layer_res
@@ -84,6 +84,7 @@ function EMR_MSM_Prediction(pred_timeseries::Array{MSM_Timeseries_Point{T},1},
                 [transpose(x[i-1,:])*B_mats[:,:,k]*x[i-1,:] for k in 1:num_params] +
                 F) + r[i-1,:,1] + x[i-1,:]
         end
+
     end
     EMR_MSM_Prediction{T, MSM_Timeseries_Point{T}}(est, pred_timeseries, start_ind)
 end

@@ -317,7 +317,7 @@ function EMR_MSM_Model_DistEstimate(timeseries::AbstractArray{MSM_Timeseries_Poi
         timesteps.(timeseries)[ts][1:(num_obs[ts]-1)])
         for ts in 1:num_timeseries]
 
-    all_ll_res = [vcat([res_est_t[ts][:,:,num_layers,j] for ts in 1:num_timeseries]...)
+    all_ll_res = [vcat([res_est_t[ts][:,:,num_layers+1,j] for ts in 1:num_timeseries]...)
                     for j in 1:num_samples*num_chains]
 
     return EMR_MSM_Model_DistEstimate{T}([EMR_MSM_Model_PointEstimate(
