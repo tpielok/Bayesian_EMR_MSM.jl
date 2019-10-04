@@ -106,7 +106,8 @@ transformed data{
 parameters {
   real<lower=0> r1_global;
   real<lower=0> r2_global;
-  real logsigma;
+  real<lower=0> logsigma;
+  real<lower=0> logrsigma;
 
   vector<lower=0>[num_params] r1_local_f;
   vector<lower=0>[num_params] r2_local_f;
@@ -121,6 +122,8 @@ parameters {
   vector[num_params2] l;
   vector[num_all_sym_params] q;
   vector[num_rescor_params] rc;
+
+  matrix[max_num_data-1, num_params] llr_rand[num_timeseries];
 }
 transformed parameters {
   real<lower=0> tau;
@@ -131,6 +134,7 @@ transformed parameters {
   vector<lower=0>[num_rescor_params] lambda_rc;
 
   real sigma;
+  real rsigma;
   vector[num_params] trafo_f;
   vector[num_params2] trafo_l;
   vector[num_all_sym_params] trafo_q;
@@ -146,6 +150,20 @@ transformed parameters {
   matrix[max_num_data-1, num_params] trafo_r_tilde[num_layers,num_timeseries];
   matrix[max_num_data-1, num_params] trafo_dr_tilde[num_layers,num_timeseries];
 
+  tau = r1_global * sqrt(r2_global);
+  lambda_f = r1_local_f .* sqrt(r2_local_f);
+  lambda_l = r1_local_l .* sqrt(r2_local_l);
+  lambda_q = r1_local_q .* sqrt(r2_local_q);
+  lambda_rc = r1_local_rc .* sqrt(r2_local_rc);
+
+  trafo_f = f .* lambda_f * tau;
+  trafo_l = l .* lambda_l * tau;
+  trafo_q = q .* lambda_q * tau;
+  trafo_rc = rc .* lambda_rc * tau;
+
+  sigma = exp(logsigma);
+  rsigma = exp(logrsigma);
+
   for(ts in 1:num_timeseries){
       trafo_dx_hat[ts] = rep_matrix(0, max_num_data-1, num_params);
       res_vec[ts] = rep_matrix(0, max_num_data-1,(num_layers+1)*num_params);
@@ -157,19 +175,6 @@ transformed parameters {
           r[i, ts] = rep_matrix(0, max_num_data-1, num_params);
           trafo_dr_tilde[i, ts] = rep_matrix(0, max_num_data-1, num_params);
       }
-
-      tau = r1_global * sqrt(r2_global);
-      lambda_f = r1_local_f .* sqrt(r2_local_f);
-      lambda_l = r1_local_l .* sqrt(r2_local_l);
-      lambda_q = r1_local_q .* sqrt(r2_local_q);
-      lambda_rc = r1_local_rc .* sqrt(r2_local_rc);
-
-      trafo_f = f .* lambda_f * tau;
-      trafo_l = l .* lambda_l * tau;
-      trafo_q = q .* lambda_q * tau;
-      trafo_rc = rc .* lambda_rc * tau;
-
-      sigma = exp(logsigma);
 
       for (i in 1:(num_data[ts]-1)){
         trafo_dx_hat[ts][i] =
@@ -203,7 +208,8 @@ transformed parameters {
             r[i+1, ts] = dr[i, ts] - trafo_dr_hat[i, ts];
           }
 
-          trafo_dr_tilde[num_layers, ts] = trafo_dr_hat[num_layers ,ts];
+          trafo_dr_tilde[num_layers, ts] = trafo_dr_hat[num_layers ,ts] +
+            llr_rand[ts];
           for(i in (-num_layers):(-1)){
               trafo_r_tilde[-i, ts] = predict(r[-i, ts][1], trafo_dr_tilde[-i, ts],
                 num_params, num_data[ts]-1);
@@ -237,6 +243,8 @@ model {
   for(ts in 1:num_timeseries){
       to_vector(dx[ts][1:(num_data[ts]-1-num_layers)]) ~ normal(
         to_vector(trafo_dx_hat[ts][1:(num_data[ts]-1-num_layers)]), sigma);
+
+      to_vector(llr_rand[ts]) ~ normal(0, rsigma);
   }
 }
 ";
