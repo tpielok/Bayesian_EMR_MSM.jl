@@ -122,8 +122,6 @@ parameters {
   vector[num_params2] l;
   vector[num_all_sym_params] q;
   vector[num_rescor_params] rc;
-
-  matrix[max_num_data-1, num_params] llr_rand[num_timeseries];
 }
 transformed parameters {
   real<lower=0> tau;
@@ -208,8 +206,7 @@ transformed parameters {
             r[i+1, ts] = dr[i, ts] - trafo_dr_hat[i, ts];
           }
 
-          trafo_dr_tilde[num_layers, ts] = trafo_dr_hat[num_layers ,ts] +
-            llr_rand[ts];
+          trafo_dr_tilde[num_layers, ts] = trafo_dr_hat[num_layers ,ts] ;
           for(i in (-num_layers):(-1)){
               trafo_r_tilde[-i, ts] = predict(r[-i, ts][1], trafo_dr_tilde[-i, ts],
                 num_params, num_data[ts]-1);
@@ -243,8 +240,6 @@ model {
   for(ts in 1:num_timeseries){
       to_vector(dx[ts][1:(num_data[ts]-1-num_layers)]) ~ normal(
         to_vector(trafo_dx_hat[ts][1:(num_data[ts]-1-num_layers)]), sigma);
-
-      to_vector(llr_rand[ts]) ~ normal(0, rsigma);
   }
 }
 ";
