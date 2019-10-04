@@ -62,7 +62,8 @@ import Random
                 Array{Float64}(undef, 0, 0, 0, 1), [1.0])]
         )
 
-        pred = Bayesian_EMR_MSM.EMR_MSM_Prediction(test_point_est, num_pred, repeat([timestep],num_ts))
+        pred = Bayesian_EMR_MSM.EMR_MSM_Prediction(test_point_est, num_pred, repeat([timestep],num_ts);
+                use_last_layer=false)
 
         tau0 = 100.0
         num_pred_samples = 100
@@ -81,7 +82,8 @@ import Random
             x -> median(x))
 
         dist_pred = Bayesian_EMR_MSM.EMR_MSM_Prediction(
-            dist_est, num_pred, repeat([timestep],num_ts), num_pred_samples
+            dist_est, num_pred, repeat([timestep],num_ts), num_pred_samples;
+            use_last_layer=false
         )
 
         print(dist_pred.pred_timeseries[1].x)
