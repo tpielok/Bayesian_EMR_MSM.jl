@@ -57,9 +57,7 @@ import Random
         ) for ts in 1:num_ts]
 
         test_point_est = Bayesian_EMR_MSM.EMR_MSM_Estimate(model, timeseries_start,
-            [Bayesian_EMR_MSM.MSM_Timeseries_Dist{Float64}(
-                Array{Float64}(undef,0,0,1),
-                Array{Float64}(undef, 0, 0, 0, 1), [1.0])]
+            timeseries_start
         )
 
         pred = Bayesian_EMR_MSM.EMR_MSM_Prediction(test_point_est, num_pred, repeat([timestep],num_ts);
@@ -82,7 +80,8 @@ import Random
             x -> median(x))
 
         dist_pred = Bayesian_EMR_MSM.EMR_MSM_Prediction(
-            dist_est, num_pred, repeat([timestep],num_ts), num_pred_samples;
+            dist_est, num_pred, repeat([timestep],num_ts), num_pred_samples,
+            repeat([1],num_ts);
             use_last_layer=false
         )
 

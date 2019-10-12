@@ -46,13 +46,37 @@ function EMR_MSM_Prediction(
         use_last_layer = use_last_layer)
 end
 
+# TODO use est.pred_ts not est.timeseries !!
+
 function EMR_MSM_Prediction(pred_timeseries::Array{MSM_Timeseries_Point{T},1},
-        est::EMR_MSM_Estimate{T, EMR_MSM_Model_PointEstimate{T}, S},
+        est::EMR_MSM_Estimate{T, EMR_MSM_Model_PointEstimate{T}, S,
+            MSM_Timeseries_Dist{T}},
         start_ind::Array{I,1} = length.(est.timeseries),
         last_layer_residuals::Union{Nothing, Array{B,1}} = nothing;
         rand_last_layer_res = true,
         use_last_layer = true
-        ) where {T<:AbstractFloat, S<:MSM_Timeseries{T}, B<:AbstractArray{T,1}, I<:Integer}
+        ) where {T<:AbstractFloat, S<:MSM_Timeseries{T},
+            B<:AbstractArray{T,1}, I<:Integer}
+
+    EMR_MSM_Prediction(pred_timeseries,
+        EMR_MSM_Estimate(est.model,est.timeseries,
+        [rand(ps.ts_points) for ps in est.pred_timeseries]),
+        start_ind,
+        last_layer_residuals;
+        rand_last_layer_res = rand_last_layer_res,
+        use_last_layer = use_last_layer
+        )
+end
+
+function EMR_MSM_Prediction(pred_timeseries::Array{MSM_Timeseries_Point{T},1},
+        est::EMR_MSM_Estimate{T, EMR_MSM_Model_PointEstimate{T}, S,
+            MSM_Timeseries_Point{T}},
+        start_ind::Array{I,1} = length.(est.timeseries),
+        last_layer_residuals::Union{Nothing, Array{B,1}} = nothing;
+        rand_last_layer_res = true,
+        use_last_layer = true
+        ) where {T<:AbstractFloat, S<:MSM_Timeseries{T},
+            B<:AbstractArray{T,1}, I<:Integer}
 
     num_layers = layers(pred_timeseries[1])
     num_params = params(pred_timeseries[1])
