@@ -98,6 +98,16 @@ MSM_Timeseries(::Type{MSM_Timeseries_Point{T}},
             )
     )
 
+    MSM_Timeseries(::Type{MSM_Timeseries_Dist{T}},
+        num_params::Integer, num_layers::Integer, timeSteps::Array{T,1},
+        num_samples::Integer = 1) where T <: Real =
+            MSM_Timeseries_Dist{T}(length(timeSteps),
+                num_params,
+                num_layers,
+                num_samples,
+                timeSteps
+                )
+
 timesteps(ts::S) where {S<:MSM_Timeseries} = ts.timesteps
 values(ts::S) where {S<:MSM_Timeseries} = ts.x
 residuals(ts::S) where {S<:MSM_Timeseries}  = ts.residuals

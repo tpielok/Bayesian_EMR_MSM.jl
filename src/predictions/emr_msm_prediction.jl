@@ -17,9 +17,9 @@ function EMR_MSM_Prediction(
             S<:MSM_Timeseries{T}, A<:AbstractArray{T,1},
             B<:AbstractArray{T,1}, I<:Integer}
 
-    pred_timeseries = [MSM_Timeseries(est.timeseries[ts], timesteps[ts],
+    pred_timeseries = [MSM_Timeseries(est.pred_timeseries[ts], timesteps[ts],
                         num_samples)
-                        for ts in 1:length(est.timeseries)]
+                        for ts in 1:length(est.pred_timeseries)]
     EMR_MSM_Prediction(pred_timeseries, est, start_ind, last_layer_residuals;
         rand_last_layer_res = rand_last_layer_res,
         use_last_layer = use_last_layer)
@@ -37,9 +37,9 @@ function EMR_MSM_Prediction(
     ) where {T<:AbstractFloat, M<:EMR_MSM_Model_Estimate{T},
             B<:AbstractArray{T,1}, S<:MSM_Timeseries{T}, I<:Integer}
 
-    pred_timeseries = [MSM_Timeseries(est.timeseries[ts], num_preds, timestep[ts],
+    pred_timeseries = [MSM_Timeseries(est.pred_timeseries[ts], num_preds, timestep[ts],
         num_samples)
-        for ts in 1:length(est.timeseries)]
+        for ts in 1:length(est.pred_timeseries)]
 
     EMR_MSM_Prediction(pred_timeseries, est, start_ind, last_layer_residuals;
         rand_last_layer_res = rand_last_layer_res,
@@ -92,8 +92,8 @@ function EMR_MSM_Prediction(pred_timeseries::Array{MSM_Timeseries_Point{T},1},
         r = residuals(pred_timeseries[ts])
         x = values(pred_timeseries[ts])
 
-        x[1,:] = values(est.timeseries[ts])[start_ind[ts], :]
-        r[1,:,:] = residuals(est.timeseries[ts])[start_ind[ts], :, :]
+        x[1,:] = values(est.pred_timeseries[ts])[start_ind[ts], :]
+        r[1,:,:] = residuals(est.pred_timeseries[ts])[start_ind[ts], :, :]
         pred_timesteps = timesteps(pred_timeseries[ts])
 
         for i=2:length(pred_timeseries[ts])

@@ -15,7 +15,8 @@ import Random
         rand_gen = Normal(0,5)
         num_obs    = 7
         num_params = 2
-        num_layers = 2
+        num_layers = 3
+        num_est_layers = 2
         num_ts = 2
         σ = 0.001
         Σ = Diagonal(repeat([σ],num_params))
@@ -66,13 +67,13 @@ import Random
         tau0 = 100.0
         num_pred_samples = 100
 
-        dist_est = Bayesian_EMR_MSM.EMR_MSM_Estimate(pred.pred_timeseries, num_layers,
+        dist_est = Bayesian_EMR_MSM.EMR_MSM_Estimate(pred.pred_timeseries, num_est_layers,
         num_samples, num_chains, tau0)
 
         mean_est = Bayesian_EMR_MSM.EMR_MSM_Model_PointEstimate(
                     dist_est.model,
                     num_params,
-                    num_layers,
+                    num_est_layers,
                     mean)
 
         test_pred_ts_med = Bayesian_EMR_MSM.MSM_Timeseries_Point{Float64}(
