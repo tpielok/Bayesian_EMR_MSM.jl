@@ -92,7 +92,7 @@ function EMR_MSM_Prediction(pred_timeseries::Array{MSM_Timeseries_Point{T},1},
         r = residuals(pred_timeseries[ts])
         x = values(pred_timeseries[ts])
 
-        x[1,:] = values(est.pred_timeseries[ts])[start_ind[ts], :]
+        x[1,:] = values(est.timeseries[ts])[start_ind[ts], :]
         r[1,:,:] = residuals(est.pred_timeseries[ts])[start_ind[ts], :, :]
         pred_timesteps = timesteps(pred_timeseries[ts])
 
