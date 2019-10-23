@@ -121,3 +121,37 @@ samples(ts::MSM_Timeseries_Dist) = size(values(ts),3)
 function Base.copy(ts::S) where {S<:MSM_Timeseries{T}} where {T <:Real}
     S(copy(ts.x), copy(ts.residuals), copy(ts.timesteps))
 end
+
+function DataFrame(ts::MSM_Timeseries_Point)
+    df = DataFrames.DataFrame()
+
+    for p in 1:params(ts)
+        df[!,Symbol("x-" * string(p))] = ts.x[:,p]
+    end
+
+    for p in 1:params(ts)
+        for l in 1:layers(ts)
+            df[!,Symbol("r-" * string(p) * "-" * string(l))] =
+                ts.residuals[:,p,l]
+        end
+    end
+
+    df[!,Symbol("t")] = accumulate(+, ts.timesteps) .- ts.timesteps[1]
+
+    df
+end
+
+function DataFrame(ts::MSM_Timeseries_Dist)
+    DataFrame.(ts.ts_points)
+end
+
+write(output::String, ts::MSM_Timeseries_Point) =
+    CSV.write(output * ".csv", DataFrame(ts))
+
+function write(output::String, ts::MSM_Timeseries_Dist)
+    dfs = DataFrame(ts)
+
+    for i in 1:length(dfs)
+        CSV.write(output * "-" * string(i) * ".csv", dfs[i])
+    end
+end

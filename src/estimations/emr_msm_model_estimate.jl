@@ -323,6 +323,34 @@ function EMR_MSM_Model_DistEstimate(timeseries::AbstractArray{MSM_Timeseries_Poi
     all_ll_res = [vcat([res_est_t[ts][:,:,num_layers+1,j] for ts in 1:num_timeseries]...)
                     for j in 1:num_samples*num_chains]
 
+    summary_df = read_summary(stanmodel)
+    conv_info = DataFrames.DataFrame()
+
+    for (name,len) in [("trafo_f", num_params), ("trafo_l", num_params^2),
+        ("trafo_rc", length(ResCorrs, num_params, num_layers))]
+        for i in 1:len
+            sdf = summary_df[Symbol(name*"[" * string(i) *"]"),[:r_hat, Symbol("n_eff/s")]]
+            sdf[!,Symbol("name")] = [name * "-" * string(i)]
+
+            push!(conv_info, sdf[1,:])
+        end
+    end
+
+    c = 1
+    for i in 1:num_params
+        for k in 1:num_params
+            for l in 1:num_params
+                sdf = summary_df[Symbol(
+                "trafo_qq[" * string(i) * "," * string(k) * "," * string(l) * "]"),
+                [:r_hat, Symbol("n_eff/s")]]
+
+                sdf[!,Symbol("name")] = ["trafo_qq-" * string(c)]
+                push!(conv_info, sdf[1,:])
+                c += 1
+            end
+        end
+    end
+
     return EMR_MSM_Model_DistEstimate{T}([EMR_MSM_Model_PointEstimate(
         [vec(chns.value[:,"trafo_f." * string(i),
         (div(j-1,num_samples)+1)])[mod(j-1,num_samples)+1] for i in 1:num_params],
@@ -344,7 +372,7 @@ function EMR_MSM_Model_DistEstimate(timeseries::AbstractArray{MSM_Timeseries_Poi
         num_params,
         num_layers
         ) for j in 1:(num_samples*num_chains)]),
-        pred_timeseries
+        pred_timeseries, conv_info
 end
 
 
@@ -352,3 +380,29 @@ end
 cmdstan_home!(home::String) = set_cmdstan_home!(home)
 
 Base.size(emr_msm::EMR_MSM_Model_DistEstimate) = size(emr_msm.estimates, 1)
+
+function DataRow(model::EMR_MSM_Model_PointEstimate)
+    df = DataFrames.DataFrame()
+    fnames = fieldnames(EMR_MSM_Model_PointEstimate)
+
+    for fname in fnames
+        item = vec(getfield(model, fname))
+        for i in 1:length(item)
+            df[!,Symbol(string(fname) * string(i))] = [item[i]]
+        end
+    end
+
+    df[1,:]
+end
+
+function DataFrame(model::EMR_MSM_Model_DistEstimate)
+    drs = DataRow.(model.estimates)
+
+    push!(DataFrames.DataFrame(drs[1]),drs[2:length(model.estimates)]...)
+end
+
+write(output::String, model::EMR_MSM_Model_PointEstimate) =
+    CSV.write(output * ".csv", DataFrames.DataFrame(DataRow(model)))
+
+write(output::String, model::EMR_MSM_Model_DistEstimate) =
+    CSV.write(output * ".csv", DataFrame(model))
