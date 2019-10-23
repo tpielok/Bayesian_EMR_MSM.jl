@@ -61,14 +61,21 @@ import Random
             timeseries_start
         )
 
+        Bayesian_EMR_MSM.write("point_est", test_point_est)
+
         pred = Bayesian_EMR_MSM.EMR_MSM_Prediction(test_point_est, num_pred, repeat([timestep],num_ts);
                 use_last_layer=false)
+
+        print(Bayesian_EMR_MSM.DataFrame(pred.pred_timeseries[1]))
 
         tau0 = 100.0
         num_pred_samples = 100
 
         dist_est = Bayesian_EMR_MSM.EMR_MSM_Estimate(pred.pred_timeseries, num_est_layers,
         num_samples, num_chains, tau0)
+
+        Bayesian_EMR_MSM.write("test", dist_est.model)
+        Bayesian_EMR_MSM.write("dist_est", dist_est)
 
         mean_est = Bayesian_EMR_MSM.EMR_MSM_Model_PointEstimate(
                     dist_est.model,
@@ -85,6 +92,8 @@ import Random
             repeat([1],num_ts);
             use_last_layer=false
         )
+
+        Bayesian_EMR_MSM.write("tmp_write/dist", dist_pred.pred_timeseries[1])
 
         print(dist_pred.pred_timeseries[1].x)
 
