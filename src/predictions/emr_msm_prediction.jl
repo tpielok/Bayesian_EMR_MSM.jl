@@ -159,3 +159,10 @@ function EMR_MSM_Prediction(pred_timeseries::Array{MSM_Timeseries_Dist{T},1},
     EMR_MSM_Prediction{T, MSM_Timeseries_Dist{T}}(
         est, pred_timeseries, start_ind)
 end
+
+function write(output::String, pred::EMR_MSM_Prediction)
+    mkpath(output)
+    for i in 1:length(pred.pred_timeseries)
+        write(joinpath(output,"ts-"*string(i)), pred.pred_timeseries[i])
+    end
+end
