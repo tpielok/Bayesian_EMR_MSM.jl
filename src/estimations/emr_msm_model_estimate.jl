@@ -246,7 +246,7 @@ model {
 
 function EMR_MSM_Model_DistEstimate(timeseries::AbstractArray{MSM_Timeseries_Point{T},1},
     num_layers::Integer, num_samples::Integer, num_chains::Integer, tau0::T=one(T);
-    uncorr = true) where T <: Real
+    uncorr = true, rand_seed::Integer=123) where T <: Real
 
     num_timeseries = length(timeseries)
 
@@ -266,7 +266,7 @@ function EMR_MSM_Model_DistEstimate(timeseries::AbstractArray{MSM_Timeseries_Poi
     # TODO random...
     stanmodel = Stanmodel(name="timeseries_mv" * string(rand(1:10000)),
         model=ts_mv_stanmodel,
-        random=CmdStan.Random(123), nchains=num_chains, num_samples=num_samples)
+        random=CmdStan.Random(rand_seed), nchains=num_chains, num_samples=num_samples)
 
     ts_data = Dict(
             "num_timeseries" => num_timeseries,

@@ -20,11 +20,12 @@ function EMR_MSM_Estimate(timeseries::AbstractArray{S,1},
     num_layers::Integer,
     num_samples::Integer,
     num_chains::Integer,
-    tau0::T = one(T)) where
+    tau0::T = one(T),
+    rand_seed::Integer=123) where
     {S <: MSM_Timeseries{T}} where T <: Real
 
     dist_model, pred_timeseries, conv_info = EMR_MSM_Model_DistEstimate(timeseries,
-                    num_layers, num_samples, num_chains, tau0)
+                    num_layers, num_samples, num_chains, tau0; rand_seed = rand_seed)
 
     EMR_MSM_Estimate{T, EMR_MSM_Model_DistEstimate{T}, S,
         typeof(pred_timeseries[1])}(

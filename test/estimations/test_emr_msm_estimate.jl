@@ -74,7 +74,7 @@ import Random
         num_pred_samples = 100
 
         dist_est = Bayesian_EMR_MSM.EMR_MSM_Estimate(pred.pred_timeseries, num_est_layers,
-        num_samples, num_chains, tau0)
+        num_samples, num_chains, tau0, 456)
 
         Bayesian_EMR_MSM.write("dist_est", dist_est)
 
